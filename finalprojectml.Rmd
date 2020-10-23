@@ -1,0 +1,145 @@
+---
+title: "final project ML"
+author: "Miguel Angel Cohuo A[vila"
+date: "20/10/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##  FINAL PROJECT MACHINE LEARNING COURSERA.
+1. load data and summary
+2. pre-analyze the data
+3. filter and clean the data
+4.- reduce the data to work with the model (Cross Validation)
+4 build the dataframe
+5.create model a.-clasification trees, randomforest, generalized boosted model)
+6.-run the prediction model of the 20 elements
+
+```{r , echo=TRUE}
+library(MASS)
+library(caTools)
+library(lattice)
+library(ggplot2)
+library(caret)
+library(rpart)
+library(randomForest)
+
+
+
+#reading cvs
+dentrenamiento <- read.csv("c:/ml/pml-training.csv",na.string=c("NA","#DIV/0!",""))
+dprueba <- read.csv("c:/ml/pml-testing.csv",na.string=c("NA","#DIV/0!",""))
+dentrenamiento$classe <- as.factor(dentrenamiento$classe)
+#summary and exploring data
+dim(dentrenamiento)
+colnames(dentrenamiento)
+summary(dentrenamiento)
+sapply(dentrenamiento, class)
+
+dim(dprueba)
+colnames(dprueba)
+summary(dprueba)
+sapply(dprueba, class)
+
+#cleanning anf filtering data
+
+entrenamiento<-dentrenamiento[,colSums(is.na(dentrenamiento))==0]
+
+prueba <- dprueba[, colSums(is.na(dprueba))==0]
+
+#removing unnecessary columns
+entrenafr <- entrenamiento[,-c(1:7)]
+pruebafr <- prueba[,-c(1:7)]
+
+dim(entrenafr)
+dim(pruebafr)
+
+
+#preprocessing variables.
+v <- which(lapply(entrenafr, class) %in% "numeric")
+
+preObj <-preProcess(entrenafr[,v],method=c('knnImpute', 'center','scale'))
+
+trainL <- predict(preObj, entrenafr[,v])
+trainL$classe <- entrenafr$classe
+testL <-predict(preObj,pruebafr[,v])
+dim(trainL)
+dim(testL)
+```
+## CORRELATION
+
+```{r , echo=TRUE}
+library(corrplot)
+cor_mat <- cor(trainL[, -28])
+corrplot(cor_mat, order = "FPC", method = "color", type = "upper", 
+         tl.cex = 0.8, tl.col = rgb(0, 0, 0))
+
+
+c <- findCorrelation(cor_mat, cutoff = .90)
+trainL <- trainL[,-c]
+testL <- testL[,-c]
+
+```
+
+
+```{r , echo=TRUE}
+#preparing data set Create cross validation set 70% train y 30% test
+#Cross Validation
+
+set.seed(7625)
+intrain <- createDataPartition(trainL$classe , p=0.7, list=FALSE )
+training <- trainL[intrain, ]
+testingCV <- trainL[-intrain, ]
+dim(training)
+dim(testingCV)
+```
+## CREATING MODEL
+
+```{r , echo=TRUE}
+library(rattle)
+#classification tree
+set.seed(53219)
+arboldecisionmodel <- rpart(classe ~ .,  data= trainL, method = "class")
+fancyRpartPlot(arboldecisionmodel)
+
+```
+```{r}
+library(randomForest)
+
+
+crf <- trainControl(method="cv",  number=3,  verboseIter = FALSE)
+modFit <- train(classe ~ ., data = trainL, method ="rf", trControl = crf)
+print(modFit, digits=4) 
+modFit$finalModel
+
+trainingPred <- predict(modFit, trainL)
+confusionMatrix(trainingPred, trainL$classe)
+
+
+cvPred <- predict(modFit, testingCV)
+confusionMatrix(cvPred, testingCV$classe)
+
+testingPred <- predict(modFit, pruebafr)
+testingPred
+```
+
+
+
+
+
+```{r , echo=TRUE}
+
+```
+
+## final
+
+```{r , echo=TRUE}
+
+```
+
+end.
